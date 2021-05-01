@@ -50,4 +50,7 @@
 	<DOCKABLE NAME="isabelle-timing" MOVABLE="TRUE">
 		new isabelle.jedit.Timing_Dockable(view, position);
 	</DOCKABLE>
+	<DOCKABLE NAME="isabelle-linter" MOVABLE="TRUE">
+		new isabelle.jedit.Linter_Dockable(view, position);
+	</DOCKABLE>
 </DOCKABLES>

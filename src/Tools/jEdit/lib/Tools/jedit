@@ -76,6 +76,11 @@ declare -a SOURCES=(
   "src/Tools/jEdit/src/token_markup.scala"
 )
 
+declare -a EXTENDED_SOURCES=(
+  ${SOURCES[@]}
+  "src/Tools/jEdit/src/linter_dockable.scala"
+)
+
 declare -a RESOURCES=(
   "src/Tools/jEdit/src/actions.xml"
   "src/Tools/jEdit/src/dockables.xml"
@@ -107,6 +112,7 @@ function usage()
   echo "                 (default $JEDIT_JAVA_SYSTEM_OPTIONS $JEDIT_JAVA_OPTIONS)"
   echo "    -R NAME      build image with requirements from other sessions"
   echo "    -b           build only"
+  echo "    -e           build with extras"
   echo "    -d DIR       include session directory"
   echo "    -f           fresh build"
   echo "    -i NAME      include session in name-space of theories"
@@ -152,11 +158,12 @@ JEDIT_LOGIC=""
 JEDIT_PRINT_MODE=""
 JEDIT_NO_BUILD=""
 JEDIT_BUILD_MODE="default"
+JEDIT_EXTRAS=""
 
 function getoptions()
 {
   OPTIND=1
-  while getopts "A:BFD:J:R:bd:fi:j:l:m:np:su" OPT
+  while getopts "A:BFD:eJ:R:bd:fi:j:l:m:np:su" OPT
   do
     case "$OPT" in
       A)
@@ -177,6 +184,9 @@ function getoptions()
         ;;
       d)
         JEDIT_SESSION_DIRS="$JEDIT_SESSION_DIRS:$OPTARG"
+        ;;
+      e)
+        JEDIT_EXTRAS="true"
         ;;
       i)
         if [ -z "$JEDIT_INCLUDE_SESSIONS" ]; then
@@ -286,8 +296,13 @@ done
 
 function target_shasum()
 (
-  shasum -a1 -b "$TARGET_JAR0" "$TARGET_JAR" "${TARGET_DEPS[@]}" \
-    "${SOURCES0[@]}" "${RESOURCES0[@]}" "${SOURCES[@]}" "${RESOURCES[@]}" 2>/dev/null
+  if [[ "$JEDIT_EXTRAS" = "true" ]] ; then
+    shasum -a1 -b "$TARGET_JAR0" "$TARGET_JAR" "${TARGET_DEPS[@]}" \
+      "${SOURCES0[@]}" "${RESOURCES0[@]}" "${EXTENDED_SOURCES[@]}" "${RESOURCES[@]}" 2>/dev/null
+  else
+    shasum -a1 -b "$TARGET_JAR0" "$TARGET_JAR" "${TARGET_DEPS[@]}" \
+      "${SOURCES0[@]}" "${RESOURCES0[@]}" "${SOURCES[@]}" "${RESOURCES[@]}" 2>/dev/null
+  fi
 )
 
 function target_clean()
@@ -348,6 +363,15 @@ if [ -e "$ISABELLE_HOME/Admin/build" -a "$?" -ne 0 ]; then
     cp -p "$ISABELLE_JEDIT_BUILD_HOME/contrib/$DEP" "$TARGET_DIR/jars/."
   done
 
+  # Additional jars
+  JARS1=(src/Tools/jEdit/target/linter/*.jar)
+  for DEP in "${JARS1[@]}"
+  do
+    TARGET_JAR1="$TARGET_DIR/jars/$(basename "$DEP")"
+    cp "$DEP" "$TARGET_JAR1"
+    classpath "$TARGET_JAR1"
+  done
+
   init_resources "${RESOURCES0[@]}"
   compile_sources "${SOURCES0[@]}"
   make_jar "$TARGET_JAR0"
@@ -385,7 +409,12 @@ if [ -e "$ISABELLE_HOME/Admin/build" -a "$?" -ne 0 ]; then
     rm -rf META-INF org
   )
 
-  compile_sources "${SOURCES[@]}"
+  if [[ "$JEDIT_EXTRAS" = "true" ]] ; then
+    echo "### Building with extras..."
+    compile_sources "${EXTENDED_SOURCES[@]}"
+  else
+    compile_sources "${SOURCES[@]}"
+  fi
   make_jar "$TARGET_JAR"
 
   target_shasum > "$TARGET_SHASUM"
