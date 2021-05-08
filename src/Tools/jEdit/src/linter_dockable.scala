@@ -48,12 +48,37 @@ class Linter_Dockable(view: View, position: String)
     }
   }
 
-  def get_lints(): List[Linter.Lint] = List(Linter.Print_Structure)
+  def lint_current_command(): Unit = {
+
+    GUI_Thread.require {}
+
+    for {
+      snapshot <- PIDE.maybe_snapshot(view)
+      if !snapshot.is_outdated
+    } {
+      val command = PIDE.editor.current_command(view, snapshot) match {
+        case Some(command) => command
+        case None          => Command.empty
+      }
+      val lint_result = Linter.lint_command(command, get_lints())
+
+      text_area.append(s"$lint_result" + "\n\n\n")
+
+    }
+  }
+
+  def get_lints(): List[Linter.Lint] =
+    List(
+      Linter.Implicit_Rule,
+      Linter.Unfinished_Proof,
+      Linter.Short_Name,
+      Linter.Print_Structure
+    )
   /* main */
 
   private val main =
     Session.Consumer[Any](getClass.getName) { _ =>
-      GUI_Thread.later { parse_current_command() }
+      GUI_Thread.later { lint_current_command() }
     }
 
   override def init(): Unit = {
