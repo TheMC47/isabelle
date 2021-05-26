@@ -44,7 +44,7 @@ class Linter_Dockable(view: View, position: String)
 
   def report(lint_report: Linter.Lint_Report): String = {
     val result = new StringBuilder()
-    result ++= s"At ${lint_report.range.start.print}:   [${lint_report.lint_name}]\n\n"
+    result ++= s"At ${lint_report.range}:   [${lint_report.lint_name}]\n\n"
     result ++= lint_report.message
     val edit = lint_report.edit match {
       case None => ""
