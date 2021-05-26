@@ -42,7 +42,7 @@ class Linter_Dockable(view: View, position: String)
     }
   }
 
-  def report(lint_report: Linter.Lint_Report): String = {
+  def report(lint_report: Linter.Lint_Result): String = {
     val result = new StringBuilder()
     result ++= s"At ${lint_report.range}:   [${lint_report.lint_name}]\n\n"
     result ++= lint_report.message
