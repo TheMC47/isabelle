@@ -184,6 +184,7 @@ class JEdit_Rendering(snapshot: Document.Snapshot, model: Document_Model, option
   val bullet_color = color("bullet_color")
   val tooltip_color = color("tooltip_color")
   val spell_checker_color = color("spell_checker_color")
+  val linter_color = color("linter_color")
   val entity_ref_color = color("entity_ref_color")
   val breakpoint_disabled_color = color("breakpoint_disabled_color")
   val breakpoint_enabled_color = color("breakpoint_enabled_color")

@@ -264,6 +264,12 @@ public option spell_checker_include : string = "words,comment,comment1,comment2,
 public option spell_checker_exclude : string = "document_marker,antiquoted,raw_text"
   -- "excluded markup elements for spell-checker (separated by commas)"
 
+section "Linter"
+
+public option linter : bool = true
+  -- "enable linter"
+
+
 
 section "Secure Shell"
 
