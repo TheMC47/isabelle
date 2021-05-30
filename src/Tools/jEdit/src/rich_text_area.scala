@@ -374,6 +374,17 @@ class Rich_Text_Area(
               val y0 = r.y + ((fm.getAscent + 4) min (line_height - 2))
               gfx.drawLine(r.x, y0, r.x + r.length, y0)
             }
+
+            // linter
+            for {
+              linter <- PIDE.plugin.linter.get
+              range <- linter.lint_ranges(rendering.snapshot)
+              r <- JEdit_Lib.gfx_range(text_area, range)
+            } {
+              gfx.setColor(rendering.linter_color)
+              val y0 = r.y + ((fm.getAscent + 4) min (line_height - 2))
+              gfx.drawLine(r.x, y0, r.x + r.length, y0)
+            }
           }
         }
       }

@@ -24,27 +24,41 @@ class Linter_Dockable(view: View, position: String)
       snapshot <- PIDE.maybe_snapshot(view)
       if !snapshot.is_outdated
     } {
-      val results = Linter.lint(snapshot, get_lints())
-      val content = results
-        .map(report(_))
-        .mkString("\n\n-------------------------------\n")
-
-      val text = XML.Text(content)
-      val new_output = Pretty.separate(text :: Nil)
-      if (current_output != new_output) {
-        output.update(
-          snapshot,
-          Command.Results.empty,
-          Pretty.separate(new_output)
-        )
-        current_output = new_output
+      val version = snapshot.version
+      val state = snapshot.state
+      PIDE.plugin.linter.get match {
+        case Some(linter) => {
+          val content = linter.lint_results(snapshot)
+            .map(report(_, snapshot))
+            .mkString("\n\n-------------------------------\n")
+          print(snapshot, s"$snapshot \n$state \n\n$content")
+        }
+        case None =>
+          print(snapshot, s"The linter plugin is disabled")
       }
     }
   }
 
-  def report(lint_report: Linter.Lint_Result): String = {
+  private def print(snapshot: Document.Snapshot, content: String): Unit = {
+    val new_output = Pretty.separate(XML.Text(content) :: Nil)
+    if (current_output != new_output) {
+      output.update(
+        snapshot,
+        Command.Results.empty,
+        Pretty.separate(new_output)
+      )
+      current_output = new_output
+    }
+  }
+
+  def report(lint_report: Linter.Lint_Result, snapshot: Document.Snapshot): String = {
+    def range_to_line(range: Text.Range): Line.Range = {
+      val document = Line.Document(snapshot.node.source)
+      document.range(range)
+    }
+
     val result = new StringBuilder()
-    result ++= s"At ${lint_report.range}:   [${lint_report.lint_name}]\n\n"
+    result ++= s"At ${range_to_line(lint_report.range).start.print}:   [${lint_report.lint_name}]\n\n"
     result ++= lint_report.message
     val edit = lint_report.edit match {
       case None => ""
@@ -55,22 +69,6 @@ class Linter_Dockable(view: View, position: String)
     result.toString()
   }
 
-  def lint_current_command(): Unit = {
-
-    GUI_Thread.require {}
-
-    for {
-      snapshot <- PIDE.maybe_snapshot(view)
-      if !snapshot.is_outdated
-    } {
-      val lint_result = for {
-        command <- PIDE.editor.current_command(view, snapshot)
-      } yield Linter.lint_command(command, snapshot, get_lints())
-
-    }
-  }
-
-  def get_lints(): List[Linter.Lint] = Linter.all_lints
   /* main */
 
   private val main =

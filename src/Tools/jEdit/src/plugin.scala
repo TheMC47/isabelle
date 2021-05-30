@@ -8,6 +8,7 @@ package isabelle.jedit
 
 
 import isabelle._
+import linter._
 
 import javax.swing.JOptionPane
 
@@ -88,6 +89,7 @@ class Plugin extends EBPlugin
 
   val completion_history = new Completion.History_Variable
   val spell_checker = new Spell_Checker_Variable
+  val linter = new Linter_Variable
 
 
   /* global changes */
@@ -403,6 +405,7 @@ class Plugin extends EBPlugin
 
           spell_checker.update(options.value)
           session.update_options(options.value)
+          linter.update(options.value)
 
         case _ =>
       }
@@ -457,6 +460,7 @@ class Plugin extends EBPlugin
     try {
       completion_history.load()
       spell_checker.update(options.value)
+      linter.update(options.value)
 
       JEdit_Lib.jedit_views.foreach(init_title)
 
