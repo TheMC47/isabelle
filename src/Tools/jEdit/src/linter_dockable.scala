@@ -28,19 +28,47 @@ class Linter_Dockable(view: View, position: String)
       val state = snapshot.state
       PIDE.plugin.linter.get match {
         case Some(linter) => {
-          val content = linter.lint_results(snapshot)
-            .map(report(_, snapshot))
-            .mkString("\n\n-------------------------------\n")
-          print(snapshot, s"$snapshot \n$state \n\n$content")
+
+          // Lints for the current command
+          val lint_current_command = for {
+            command <- PIDE.editor.current_command(view, snapshot)
+          } yield linter.command_lints(snapshot, command.id)
+
+          val separator = XML.Text("----------------") :: Nil
+
+          val command_lint: XML.Body = lint_current_command match {
+            case Some(Nil) | None =>
+              XML.Text("No lints here.") :: Nil
+            case Some(lint_results) =>
+              lint_results
+                .map(report(_, snapshot, false))
+                .flatten
+          }
+
+          val content =
+            if (PIDE.options.bool("lint_buffer"))
+              command_lint ::: separator ::: linter
+                .lint_results(snapshot)
+                .map(report(_, snapshot))
+                .flatten
+            else command_lint
+
+          val new_output = Pretty.separate(content)
+          update_output(snapshot, new_output)
         }
         case None =>
-          print(snapshot, s"The linter plugin is disabled")
+          update_output(
+            snapshot,
+            Pretty.separate(XML.Text("The linter plugin is disabled") :: Nil)
+          )
       }
     }
   }
 
-  private def print(snapshot: Document.Snapshot, content: String): Unit = {
-    val new_output = Pretty.separate(XML.Text(content) :: Nil)
+  private def update_output(
+      snapshot: Document.Snapshot,
+      new_output: List[XML.Tree]
+  ): Unit =
     if (current_output != new_output) {
       output.update(
         snapshot,
@@ -49,16 +77,22 @@ class Linter_Dockable(view: View, position: String)
       )
       current_output = new_output
     }
-  }
 
-  def report(lint_report: Linter.Lint_Result, snapshot: Document.Snapshot): String = {
+  def report(
+      lint_report: Linter.Lint_Result,
+      snapshot: Document.Snapshot,
+      print_location: Boolean = true
+  ): XML.Body = {
     def range_to_line(range: Text.Range): Line.Range = {
       val document = Line.Document(snapshot.node.source)
       document.range(range)
     }
 
     val result = new StringBuilder()
-    result ++= s"At ${range_to_line(lint_report.range).start.print}:   [${lint_report.lint_name}]\n\n"
+    if (print_location)
+      result ++= s"At ${range_to_line(lint_report.range).start.print}:  "
+
+    result ++= s"[${lint_report.lint_name}]\n\n"
     result ++= lint_report.message
     val edit = lint_report.edit match {
       case None => ""
@@ -66,7 +100,7 @@ class Linter_Dockable(view: View, position: String)
         s"""\nConsider changing "$before" to "$after""""
     }
     result ++= edit
-    result.toString()
+    XML.Text(result.toString()) :: Nil
   }
 
   /* main */
