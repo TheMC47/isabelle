@@ -79,7 +79,7 @@ class Linter_Dockable(view: View, position: String)
     }
 
   def report(
-      lint_report: Linter.Lint_Result,
+      lint_result: Linter.Lint_Result,
       snapshot: Document.Snapshot,
       print_location: Boolean = true
   ): XML.Body = {
@@ -88,19 +88,21 @@ class Linter_Dockable(view: View, position: String)
       document.range(range)
     }
 
-    val result = new StringBuilder()
+    val text = new StringBuilder()
     if (print_location)
-      result ++= s"At ${range_to_line(lint_report.range).start.print}:  "
+      text ++= s"At ${range_to_line(lint_result.range).start.print}:  "
 
-    result ++= s"[${lint_report.lint_name}]\n\n"
-    result ++= lint_report.message
-    val edit = lint_report.edit match {
-      case None => ""
-      case Some((before, after)) =>
-        s"""\nConsider changing "$before" to "$after""""
+    text ++= s"[${lint_result.lint_name}]\n"
+    text ++= lint_result.message
+    val edit = lint_result.edit match {
+      case None => Nil
+      case Some(edit) =>
+        XML.Text("Consider: ") :: XML.Elem(
+          Markup(Markup.LINTER, Position.Range(edit.range) ::: Markup.Content(edit.replacement)),
+          XML.Text(edit.message) :: Nil
+        ) :: Nil
     }
-    result ++= edit
-    XML.Text(result.toString()) :: Nil
+    XML.Text(text.toString()) :: edit
   }
 
   /* main */
