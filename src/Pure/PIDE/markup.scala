@@ -567,6 +567,7 @@ object Markup
   val BROWSER = "browser"
   val GRAPHVIEW = "graphview"
   val THEORY_EXPORTS = "theory_exports"
+  val LINTER = "linter"
 
   val SENDBACK = "sendback"
   val PADDING = "padding"

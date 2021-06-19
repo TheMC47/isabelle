@@ -219,7 +219,7 @@ object Rendering
 
   val active_elements =
     Markup.Elements(Markup.DIALOG, Markup.BROWSER, Markup.GRAPHVIEW, Markup.THEORY_EXPORTS,
-      Markup.SENDBACK, Markup.JEDIT_ACTION, Markup.SIMP_TRACE_PANEL)
+      Markup.SENDBACK, Markup.JEDIT_ACTION, Markup.SIMP_TRACE_PANEL, Markup.LINTER)
 
   val background_elements =
     Document_Status.Command_Status.proper_elements + Markup.WRITELN_MESSAGE +
