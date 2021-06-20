@@ -10,6 +10,8 @@ package isabelle.jedit
 import isabelle._
 import isabelle.jedit_base.Dockable
 
+import linter._
+
 import scala.swing.{Button, CheckBox}
 import scala.swing.event.ButtonClicked
 
@@ -59,7 +61,7 @@ class Output_Dockable(view: View, position: String) extends Dockable(view, posit
 
       val new_output =
         if (restriction.isEmpty || restriction.get.contains(command))
-          Rendering.output_messages(results)
+          Rendering.output_messages(results) ::: XML_Lint_Reporter.report_snapshot_xml(command, snapshot, print_header = true)
         else current_output
 
       if (current_output != new_output) {
@@ -102,11 +104,29 @@ class Output_Dockable(view: View, position: String) extends Dockable(view, posit
     reactions += { case ButtonClicked(_) => handle_update(true, None) }
   }
 
+  private def linter: Boolean = PIDE.options.bool("linter")
+  private def linter_=(b: Boolean): Unit =
+  {
+    if (linter != b) {
+      PIDE.options.bool("linter") = b
+      PIDE.plugin.linter.update(PIDE.options.value)
+      PIDE.editor.flush_edits(hidden = true)
+      PIDE.editor.flush()
+    }
+  }
+
+  private val linter_button = new CheckBox("Lint")
+  {
+    tooltip = "Lint the command at cursor position"
+    reactions += { case ButtonClicked(_) => linter = selected }
+    selected = linter
+  }
+
   private val zoom = new Font_Info.Zoom_Box { def changed = handle_resize() }
 
   private val controls =
     Wrap_Panel(
-      List(output_state_button, auto_update_button,
+      List(linter_button, output_state_button, auto_update_button,
         update_button, pretty_text_area.search_label, pretty_text_area.search_field, zoom))
 
   add(controls.peer, BorderLayout.NORTH)
@@ -120,6 +140,7 @@ class Output_Dockable(view: View, position: String) extends Dockable(view, posit
         GUI_Thread.later {
           handle_resize()
           output_state_button.selected = output_state
+          linter_button.selected = linter
           handle_update(do_update, None)
         }
 
