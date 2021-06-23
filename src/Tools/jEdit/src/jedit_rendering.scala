@@ -10,6 +10,8 @@ package isabelle.jedit
 
 import isabelle._
 
+import linter._
+
 import java.awt.Color
 import javax.swing.Icon
 
@@ -184,7 +186,9 @@ class JEdit_Rendering(snapshot: Document.Snapshot, model: Document_Model, option
   val bullet_color = color("bullet_color")
   val tooltip_color = color("tooltip_color")
   val spell_checker_color = color("spell_checker_color")
-  val linter_color = color("linter_color")
+  val linter_low_color = color("linter_low_color")
+  val linter_medium_color = color("linter_medium_color")
+  val linter_high_color = color("linter_high_color")
   val entity_ref_color = color("entity_ref_color")
   val breakpoint_disabled_color = color("breakpoint_disabled_color")
   val breakpoint_enabled_color = color("breakpoint_enabled_color")
@@ -195,6 +199,11 @@ class JEdit_Rendering(snapshot: Document.Snapshot, model: Document_Model, option
   val caret_invisible_color = color("caret_invisible_color")
   val completion_color = color("completion_color")
   val search_color = color("search_color")
+
+  val lint_severity_color = Map(
+    Linter.Severity.LOW -> linter_low_color,
+    Linter.Severity.MEDIUM -> linter_medium_color,
+    Linter.Severity.HIGH -> linter_high_color)
 
 
   /* indentation */

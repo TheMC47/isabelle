@@ -378,10 +378,11 @@ class Rich_Text_Area(
             // linter
             for {
               linter <- PIDE.plugin.linter.get
-              range <- linter.lint_ranges(rendering.snapshot, line_range)
+              Text.Info(range, severity) <- linter.lint_ranges(rendering.snapshot, line_range)
               r <- JEdit_Lib.gfx_range(text_area, range)
+              color = rendering.lint_severity_color(severity)
             } {
-              gfx.setColor(rendering.linter_color)
+              gfx.setColor(color)
               val y0 = r.y + ((fm.getAscent + 4) min (line_height - 2))
               gfx.drawLine(r.x, y0, r.x + r.length, y0)
             }
