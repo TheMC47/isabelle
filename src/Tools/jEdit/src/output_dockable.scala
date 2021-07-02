@@ -61,7 +61,7 @@ class Output_Dockable(view: View, position: String) extends Dockable(view, posit
 
       val new_output =
         if (restriction.isEmpty || restriction.get.contains(command))
-          Rendering.output_messages(results) ::: XML_Lint_Reporter.report_snapshot_xml(command, snapshot, print_header = true)
+          Rendering.output_messages(results) // ::: XML_Lint_Reporter.report_snapshot_xml(command, snapshot, print_header = true)
         else current_output
 
       if (current_output != new_output) {

@@ -134,7 +134,7 @@ object XML_Lint_Reporter {
       case None => disabled
       case Some(linter) =>
         val command_lint =
-          linter.command_lints(snapshot, current_command.id) match {
+          linter.lint_report(snapshot).command_lints(current_command.id) match {
             case Nil => empty
             case lint_results @ (_ :: _) =>
               report_lints_xml(
@@ -147,7 +147,8 @@ object XML_Lint_Reporter {
         val all_lints = when(
           lint_all,
           SEPARATOR ::: linter
-            .lint_results(snapshot)
+            .lint_report(snapshot)
+            .results
             .map(
               report_lint_xml(
                 _,
