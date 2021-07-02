@@ -52,6 +52,9 @@ class Linter_Dockable(view: View, position: String)
   val output = new Pretty_Text_Area(view)
   set_content(output)
 
+  val separator = XML_Lint_Reporter.text("----------------")
+  val disabled = XML_Lint_Reporter.text("The linter plugin is disabled.")
+
   override def detach_operation: Option[() => Unit] = output.detach_operation
 
   def lint(): Unit = {
@@ -62,20 +65,40 @@ class Linter_Dockable(view: View, position: String)
       snapshot <- PIDE.maybe_snapshot(view)
       if !snapshot.is_outdated
     } {
-      val lint_all = PIDE.options.bool("lint_buffer")
-      val current_command = PIDE.editor.current_command(view, snapshot) match {
-        case None          => Command.empty
-        case Some(command) => command
-      }
+      val new_output = PIDE.plugin.linter.get match {
+        case None => disabled
+        case Some(linter) =>
+          val lint_all = PIDE.options.bool("lint_buffer")
+          val current_command =
+            PIDE.editor.current_command(view, snapshot) match {
+              case None          => Command.empty
+              case Some(command) => command
+            }
 
-      val new_output = XML_Lint_Reporter.report_snapshot_xml(
-        current_command,
-        snapshot,
-        lint_all = lint_all,
-        print_disabled = true,
-        print_empty = true,
-        print_name =  true
-      )
+          val command_lints = linter
+            .lint_report(snapshot)
+            .command_lints(current_command.id) match {
+            case Nil => XML_Lint_Reporter.text("No lints here.")
+            case lint_results @ (_ :: _) =>
+              XML_Lint_Reporter.report_lints(
+                lint_results,
+                print_location = false,
+                print_name = false
+              )
+          }
+
+          val all_lints = if (lint_all) {
+            val all_results = linter
+              .lint_report(snapshot)
+              .results
+            separator ::: XML_Lint_Reporter.report_lints(
+              all_results,
+              print_location = true,
+              print_name = true
+            )
+          } else Nil
+          command_lints ::: all_lints
+      }
 
       if (current_output != new_output) {
         output.update(
@@ -106,127 +129,4 @@ class Linter_Dockable(view: View, position: String)
     PIDE.session.commands_changed -= main
     PIDE.session.caret_focus -= main
   }
-}
-
-object XML_Lint_Reporter {
-
-  // TODO move me
-
-  val HEADER = XML.elem(Markup.KEYWORD1, text("lints: ")) :: Nil
-  val EMPTY = text("No lints here.")
-  val SEPARATOR = text("----------------")
-  val DISABLED = text("The linter plugin is disabled.")
-
-  def report_snapshot_xml(
-      current_command: Command,
-      snapshot: Document.Snapshot,
-      lint_all: Boolean = false,
-      print_header: Boolean = false,
-      print_empty: Boolean = false,
-      print_disabled: Boolean = false,
-      print_name: Boolean = false
-  ): XML.Body = {
-    val header = when(print_header, HEADER)
-    val empty = when(print_empty, EMPTY)
-    val disabled = when(print_disabled, DISABLED)
-
-    PIDE.plugin.linter.get match {
-      case None => disabled
-      case Some(linter) =>
-        val command_lint =
-          linter.lint_report(snapshot).command_lints(current_command.id) match {
-            case Nil => empty
-            case lint_results @ (_ :: _) =>
-              report_lints_xml(
-                lint_results,
-                snapshot,
-                print_location = false,
-                print_name = print_name
-              )
-          }
-        val all_lints = when(
-          lint_all,
-          SEPARATOR ::: linter
-            .lint_report(snapshot)
-            .results
-            .map(
-              report_lint_xml(
-                _,
-                snapshot,
-                print_location = true,
-                print_name = print_name
-              )
-            )
-            .flatten
-        )
-        val lints = command_lint ::: all_lints
-        if (lints.isEmpty) lints else header ::: lints
-    }
-  }
-
-  def report_lints_xml(
-      lint_results: List[Linter.Lint_Result],
-      snapshot: Document.Snapshot,
-      print_location: Boolean = false,
-      print_name: Boolean = false
-  ): XML.Body =
-    lint_results.zipWithIndex
-      .map(ri =>
-        report_lint_xml(
-          ri._1,
-          snapshot,
-          ri._2,
-          print_location = print_location,
-          print_name = print_name
-        )
-      )
-      .flatten
-
-  def report_lint_xml(
-      lint_result: Linter.Lint_Result,
-      snapshot: Document.Snapshot,
-      lint_number: Int = 0,
-      print_location: Boolean = false,
-      print_name: Boolean = false
-  ): XML.Body = {
-
-    def text_range_to_line(range: Text.Range): Line.Range = {
-      val document = Line.Document(snapshot.node.source)
-      document.range(range)
-    }
-
-    val location = when(
-      print_location,
-      text(s"At ${text_range_to_line(lint_result.range).start.print}:\n")
-    )
-
-    val message = text(s" ${lint_number + 1}. ${lint_result.message}")
-    val lint_name =
-      when(print_name, text(s" [lint name: ${lint_result.lint_name}]"))
-
-    val edit = lint_result.edit match {
-      case Some(edit) => text(" Consider: ") ::: edit_markup(edit)
-      case None       => Nil
-    }
-
-    block(location ::: message ::: edit ::: lint_name)
-  }
-
-  /* xml helpers */
-
-  private def when(b: Boolean, x: XML.Body): XML.Body = if (b) x else Nil
-
-  private def edit_markup(edit: Linter.Edit): XML.Body = XML.Elem(
-    Markup(
-      Markup.LINTER,
-      Position.Range(edit.range) ::: Markup.Content(edit.replacement)
-    ),
-    text(edit.message)
-  ) :: Nil
-
-  private def text(content: String): XML.Body = XML.Text(content) :: Nil
-
-  private def block(inner: XML.Body): XML.Body =
-    XML.elem(Markup.Block.name, inner) :: Nil
-
 }

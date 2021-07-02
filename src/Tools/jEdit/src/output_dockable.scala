@@ -36,6 +36,20 @@ class Output_Dockable(view: View, position: String) extends Dockable(view, posit
 
   override def detach_operation: Option[() => Unit] = pretty_text_area.detach_operation
 
+  private def handle_lint(
+      command: Command,
+      snapshot: Document.Snapshot
+  ): XML.Body =
+    PIDE.plugin.linter.get match {
+      case None => Nil
+      case Some(linter) =>
+        val lints = linter.lint_report(snapshot).command_lints(command.id)
+        if (lints.isEmpty) Nil
+        else
+          XML.elem(Markup.KEYWORD1, XML_Lint_Reporter.text("lints:")) ::
+            XML_Lint_Reporter.report_lints(lints)
+    }
+
 
   private def handle_resize()
   {
@@ -61,7 +75,7 @@ class Output_Dockable(view: View, position: String) extends Dockable(view, posit
 
       val new_output =
         if (restriction.isEmpty || restriction.get.contains(command))
-          Rendering.output_messages(results) // ::: XML_Lint_Reporter.report_snapshot_xml(command, snapshot, print_header = true)
+          Rendering.output_messages(results) ::: handle_lint(command, snapshot)
         else current_output
 
       if (current_output != new_output) {
