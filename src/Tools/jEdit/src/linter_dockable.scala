@@ -75,28 +75,12 @@ class Linter_Dockable(view: View, position: String)
               case Some(command) => command
             }
 
-          val command_lints = linter
-            .lint_report(snapshot)
-            .command_lints(current_command.id) match {
-            case Nil => XML_Lint_Reporter.text("No lints here.")
-            case lint_results @ (_ :: _) =>
-              XML_Lint_Reporter.report_lints(
-                lint_results,
-                print_location = false,
-                print_name = false
-              )
-          }
+          val command_lints =
+            linter.report_for_command(snapshot, current_command.id)
 
-          val all_lints = if (lint_all) {
-            val all_results = linter
-              .lint_report(snapshot)
-              .results
-            separator ::: XML_Lint_Reporter.report_lints(
-              all_results,
-              print_location = true,
-              print_name = true
-            )
-          } else Nil
+          val all_lints =
+            if (lint_all) separator ::: linter.report_for_snapshot(snapshot)
+            else Nil
           command_lints ::: all_lints
       }
 

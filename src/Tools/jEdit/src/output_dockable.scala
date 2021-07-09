@@ -42,12 +42,7 @@ class Output_Dockable(view: View, position: String) extends Dockable(view, posit
   ): XML.Body =
     PIDE.plugin.linter.get match {
       case None => Nil
-      case Some(linter) =>
-        val lints = linter.lint_report(snapshot).command_lints(command.id)
-        if (lints.isEmpty) Nil
-        else
-          XML.elem(Markup.KEYWORD1, XML_Lint_Reporter.text("lints:")) ::
-            XML_Lint_Reporter.report_lints(lints)
+      case Some(linter) => linter.report_for_command(snapshot, command.id)
     }
 
 

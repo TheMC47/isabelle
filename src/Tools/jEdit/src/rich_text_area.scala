@@ -378,7 +378,7 @@ class Rich_Text_Area(
             // linter
             for {
               linter <- PIDE.plugin.linter.get
-              Text.Info(range, severity) <- linter.lint_report(rendering.snapshot).lint_ranges(line_range)
+              Text.Info(range, severity) <- linter.lint_report(rendering.snapshot).ranges(line_range)
               r <- JEdit_Lib.gfx_range(text_area, range)
               color = rendering.lint_severity_color(severity)
             } {

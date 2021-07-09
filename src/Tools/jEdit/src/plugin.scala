@@ -89,7 +89,7 @@ class Plugin extends EBPlugin
 
   val completion_history = new Completion.History_Variable
   val spell_checker = new Spell_Checker_Variable
-  val linter = new Linter_Variable
+  val linter = new Linter_Variable(XML_Lint_Reporter)
 
 
   /* global changes */
