@@ -2,9 +2,16 @@ package isabelle.jedit
 
 import isabelle._
 import isabelle.jedit_base.Dockable
-import org.gjt.sp.jedit.View
-import scala.swing.{TextArea, ScrollPane}
+
 import linter._
+
+import scala.swing.{Button, CheckBox}
+import scala.swing.event.ButtonClicked
+
+import java.awt.BorderLayout
+import java.awt.event.{ComponentEvent, ComponentAdapter}
+
+import org.gjt.sp.jedit.View
 
 object Linter_Dockable {
 
@@ -49,26 +56,26 @@ class Linter_Dockable(view: View, position: String)
 
   private var current_output: List[XML.Tree] = Nil
 
-  val output = new Pretty_Text_Area(view)
-  set_content(output)
+  val pretty_text_area = new Pretty_Text_Area(view)
+  set_content(pretty_text_area)
 
   val separator = XML_Lint_Reporter.text("----------------")
   val disabled = XML_Lint_Reporter.text("The linter plugin is disabled.")
 
-  override def detach_operation: Option[() => Unit] = output.detach_operation
+  override def detach_operation: Option[() => Unit] =
+    pretty_text_area.detach_operation
 
-  def lint(): Unit = {
+  def handle_lint(do_lint: Boolean): Unit = {
 
     GUI_Thread.require {}
 
     for {
       snapshot <- PIDE.maybe_snapshot(view)
-      if !snapshot.is_outdated
+      if !snapshot.is_outdated && do_lint
     } {
       val new_output = PIDE.plugin.linter.get match {
         case None => disabled
         case Some(linter) =>
-          val lint_all = PIDE.options.bool("lint_buffer")
           val current_command =
             PIDE.editor.current_command(view, snapshot) match {
               case None          => Command.empty
@@ -78,14 +85,18 @@ class Linter_Dockable(view: View, position: String)
           val command_lints =
             linter.report_for_command(snapshot, current_command.id)
 
+          lazy val snapshot_lints =
+            linter.report_for_snapshot(snapshot)
+
           val all_lints =
-            if (lint_all) separator ::: linter.report_for_snapshot(snapshot)
+            if (lint_all && !snapshot_lints.isEmpty)
+              separator ::: snapshot_lints
             else Nil
           command_lints ::: all_lints
       }
 
       if (current_output != new_output) {
-        output.update(
+        pretty_text_area.update(
           snapshot,
           Command.Results.empty,
           Pretty.separate(new_output)
@@ -95,11 +106,74 @@ class Linter_Dockable(view: View, position: String)
     }
   }
 
+  /* controls */
+
+  private def lint_all: Boolean = PIDE.options.bool("lint_all")
+  private def lint_all_=(b: Boolean): Unit = {
+    if (lint_all != b) {
+      PIDE.options.bool("lint_all") = b
+      PIDE.editor.flush_edits(hidden = true)
+      PIDE.editor.flush()
+    }
+  }
+
+  private val lint_all_button = new CheckBox("Lint all") {
+    tooltip = "Display lints of the whole document"
+    reactions += { case ButtonClicked(_) =>
+      lint_all = selected; handle_lint(true)
+    }
+    selected = lint_all
+  }
+
+  private var auto_lint: Boolean = true
+
+  private val auto_lint_button = new CheckBox("Auto lint") {
+    tooltip = "Indicate automatic lint following cursor movement"
+    reactions += { case ButtonClicked(_) => auto_lint = this.selected }
+    selected = auto_lint
+  }
+
+  private val lint_button = new Button("Lint") {
+    tooltip = "Lint and update display"
+    reactions += { case ButtonClicked(_) => handle_lint(true) }
+  }
+
+  private def linter: Boolean = PIDE.options.bool("linter")
+  private def linter_=(b: Boolean): Unit = {
+    if (linter != b) {
+      PIDE.options.bool("linter") = b
+      PIDE.plugin.linter.update(PIDE.options.value)
+      PIDE.editor.flush_edits(hidden = true)
+      PIDE.editor.flush()
+    }
+  }
+
+  private val linter_button = new CheckBox("Linter") {
+    tooltip = "State of the linter"
+    reactions += { case ButtonClicked(_) =>
+      linter = selected; handle_lint(true)
+    }
+    selected = linter
+  }
+
+  private val controls =
+    Wrap_Panel(
+      List(linter_button, auto_lint_button, lint_all_button, lint_button)
+    )
+
+  add(controls.peer, BorderLayout.NORTH)
+
   /* main */
 
   private val main =
-    Session.Consumer[Any](getClass.getName) { _ =>
-      GUI_Thread.later { lint() }
+    Session.Consumer[Any](getClass.getName) {
+      case _: Session.Global_Options =>
+        GUI_Thread.later { handle_lint(auto_lint) }
+
+      case _: Session.Commands_Changed =>
+        GUI_Thread.later { handle_lint(auto_lint) }
+
+      case Session.Caret_Focus => GUI_Thread.later { handle_lint(auto_lint) }
     }
 
   override def init(): Unit = {
@@ -113,4 +187,5 @@ class Linter_Dockable(view: View, position: String)
     PIDE.session.commands_changed -= main
     PIDE.session.caret_focus -= main
   }
+
 }

@@ -279,8 +279,8 @@ public option enabled_lints : string = ""
 public option disabled_lints : string = ""
   -- "disabled lints"
 
-public option lint_buffer : bool = true
-  -- "display the lints of the buffer"
+public option lint_all : bool = true
+  -- "display the lints of the whole document"
 
 public option linter_output_panel : bool = true
   -- "display lint results in the output panel"
