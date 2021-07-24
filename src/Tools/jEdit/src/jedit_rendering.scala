@@ -201,9 +201,9 @@ class JEdit_Rendering(snapshot: Document.Snapshot, model: Document_Model, option
   val search_color = color("search_color")
 
   val lint_severity_color = Map(
-    Linter.Severity.LOW -> linter_low_color,
-    Linter.Severity.MEDIUM -> linter_medium_color,
-    Linter.Severity.HIGH -> linter_high_color)
+    Linter.Severity.Low -> linter_low_color,
+    Linter.Severity.Medium -> linter_medium_color,
+    Linter.Severity.High -> linter_high_color)
 
 
   /* indentation */
