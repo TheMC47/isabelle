@@ -41,8 +41,8 @@ class Output_Dockable(view: View, position: String) extends Dockable(view, posit
       snapshot: Document.Snapshot
   ): XML.Body =
     PIDE.plugin.linter.get match {
-      case None => Nil
-      case Some(linter) => linter.report_for_command(snapshot, command.id)
+      case Some(linter) if linter_output => linter.report_for_command(snapshot, command.id)
+      case _ => Nil
     }
 
 
@@ -113,22 +113,21 @@ class Output_Dockable(view: View, position: String) extends Dockable(view, posit
     reactions += { case ButtonClicked(_) => handle_update(true, None) }
   }
 
-  private def linter: Boolean = PIDE.options.bool("linter")
-  private def linter_=(b: Boolean): Unit =
+  private def linter_output: Boolean = PIDE.options.bool("linter_output_panel")
+  private def linter_output_=(b: Boolean): Unit =
   {
-    if (linter != b) {
-      PIDE.options.bool("linter") = b
-      PIDE.plugin.linter.update(PIDE.options.value)
+    if (linter_output != b) {
+      PIDE.options.bool("linter_output_panel") = b
       PIDE.editor.flush_edits(hidden = true)
       PIDE.editor.flush()
     }
   }
 
-  private val linter_button = new CheckBox("Lint")
+  private val linter_button = new CheckBox("Linter output")
   {
-    tooltip = "Lint the command at cursor position"
-    reactions += { case ButtonClicked(_) => linter = selected }
-    selected = linter
+    tooltip = "Output of the linter"
+    reactions += { case ButtonClicked(_) => linter_output = selected }
+    selected = linter_output
   }
 
   private val zoom = new Font_Info.Zoom_Box { def changed = handle_resize() }
@@ -149,7 +148,7 @@ class Output_Dockable(view: View, position: String) extends Dockable(view, posit
         GUI_Thread.later {
           handle_resize()
           output_state_button.selected = output_state
-          linter_button.selected = linter
+          linter_button.selected = linter_output
           handle_update(do_update, None)
         }
 
