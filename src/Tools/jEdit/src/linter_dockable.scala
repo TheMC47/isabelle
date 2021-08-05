@@ -51,6 +51,43 @@ object Linter_Dockable {
 
 }
 
+class PIDE_Linter_Variable[A](reporter: Reporter[A])
+    extends Linter_Variable[A](reporter, true) {
+
+  private def refresh_lint(): Unit = {
+    for {
+      snapshot <- PIDE.maybe_snapshot()
+      linter <- get
+      if !snapshot.is_outdated
+    } linter.do_lint(snapshot)
+
+  }
+
+  private val main =
+    Session.Consumer[Any](getClass.getName) { case _ =>
+      GUI_Thread.later {
+        Isabelle_Thread.fork(name = "linter") {
+          refresh_lint()
+          // FIXME maybe a separate event for the linter?
+          PIDE.session.caret_focus.post(Session.Caret_Focus)
+        }
+      }
+    }
+
+  def setup_handlers(): Unit =
+    if (get.isEmpty) uninstall_handlers() else install_handlers()
+
+  private def install_handlers(): Unit = {
+    PIDE.session.global_options += main
+    PIDE.session.commands_changed += main
+  }
+  private def uninstall_handlers(): Unit = {
+    PIDE.session.global_options -= main
+    PIDE.session.commands_changed -= main
+  }
+
+}
+
 class Linter_Dockable(view: View, position: String)
     extends Dockable(view, position) {
 

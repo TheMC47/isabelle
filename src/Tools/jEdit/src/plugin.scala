@@ -89,7 +89,7 @@ class Plugin extends EBPlugin
 
   val completion_history = new Completion.History_Variable
   val spell_checker = new Spell_Checker_Variable
-  val linter = new Linter_Variable(XML_Lint_Reporter)
+  val linter = new PIDE_Linter_Variable(XML_Lint_Reporter)
 
 
   /* global changes */
@@ -461,6 +461,7 @@ class Plugin extends EBPlugin
       completion_history.load()
       spell_checker.update(options.value)
       linter.update(options.value)
+      linter.setup_handlers()
 
       JEdit_Lib.jedit_views.foreach(init_title)
 
