@@ -38,11 +38,16 @@ object Linter_Dockable {
         snapshot: Document.Snapshot
     ): Boolean = {
       elem match {
-        case XML.Elem(Markup(Markup.LINTER, props), body) =>
+        case XML.Elem(Markup(Markup.LINT_EDIT, props), _) =>
           for {
             range <- Position.Range.unapply(props)
             content <- Markup.Content.unapply(props)
           } do_replace(doc_view, range, content)
+          true
+        case XML.Elem(Markup(Markup.LINT_LOCATION, props), _) =>
+          for {
+            range <- Position.Range.unapply(props)
+          } doc_view.text_area.moveCaretPosition(range.start)
           true
         case _ => false
       }
