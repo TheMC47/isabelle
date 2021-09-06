@@ -208,25 +208,17 @@ class Linter_Dockable(view: View, position: String)
   /* main */
 
   private val main =
-    Session.Consumer[Any](getClass.getName) {
-      case _: Session.Global_Options =>
-        GUI_Thread.later { handle_lint(auto_lint) }
-
-      case _: Session.Commands_Changed =>
-        GUI_Thread.later { handle_lint(auto_lint) }
-
-      case Session.Caret_Focus => GUI_Thread.later { handle_lint(auto_lint) }
+    Session.Consumer[Any](getClass.getName) { case _ =>
+      GUI_Thread.later { handle_lint(auto_lint) }
     }
 
   override def init(): Unit = {
     PIDE.session.global_options += main
-    PIDE.session.commands_changed += main
     PIDE.session.caret_focus += main
   }
 
   override def exit(): Unit = {
     PIDE.session.global_options -= main
-    PIDE.session.commands_changed -= main
     PIDE.session.caret_focus -= main
   }
 
